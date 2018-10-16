@@ -41,6 +41,7 @@ if __name__ == '__main__':
 
     # dict with data necessary to make predictions
     model_config = {}
+    model_config['constant_columns'] = constant_columns
     model_config['categorical_values'] = {}
     model_config['is_big'] = is_big
 
@@ -63,11 +64,9 @@ if __name__ == '__main__':
     else:
 
         # rename c_, d_, r_
-
+        df_X = add_prefix_to_colnames(df_X, ONEHOT_MAX_UNIQUE_VALUES)
         # missing values
-        if any(df_X.isnull()):
-            model_config['missing'] = True
-            df_X.fillna(-1, inplace=True)
+        df_X = replace_na_and_create_na_feature(df_X)
 
 
         # features from datetime

@@ -27,6 +27,13 @@ if __name__ == '__main__':
     df = pd.read_csv(args.test_csv)
     print('Dataset read, shape {}'.format(df.shape))
 
+    # drop train constant values
+    df.drop(model_config['constant_columns'], axis=1, inplace=True)
+    # rename c_, d_, r_
+    df_X = add_prefix_to_colnames(df_X, ONEHOT_MAX_UNIQUE_VALUES)
+    # missing values
+    df_X = replace_na_and_create_na_feature(df_X)
+
     if not model_config['is_big']:
         # features from datetime
         df = transform_datetime_features(df)
@@ -34,11 +41,14 @@ if __name__ == '__main__':
         # categorical onehot encoding
         df = onehot_encoding_test(df, model_config['categorical_to_onehot'])
 
+        # real number feature extraction
+
+
     # missing values
-    if model_config['missing']:
-        df.fillna(-1, inplace=True)
-    elif any(df.isnull()):
-        df.fillna(value=df.mean(axis=0), inplace=True)
+    # if model_config['missing']:
+    #     df.fillna(-1, inplace=True)
+    # elif any(df.isnull()):
+    #     df.fillna(value=df.mean(axis=0), inplace=True)
 
     # filter columns
     used_columns = model_config['used_columns']

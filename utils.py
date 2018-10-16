@@ -59,3 +59,38 @@ def onehot_encoding_test(df, categorical_to_onehot):
         for unique_value in unique_values:
             df['onehot_{}={}'.format(col_name, unique_value)] = (df[col_name] == unique_value).astype(int)
     return df
+
+
+def add_prefix_to_colnames(df_X, ONEHOT_MAX_UNIQUE_VALUES=6):
+    for col in df_X.columns:
+        num_unique = df_X[col].nunique()
+        if df_X[col].dtype.name.startswith('int') | df_X[col].dtype.name.startswith('float'):
+            if num_unique == 2:
+                df_X.rename(columns={col:('d_'+col)}, inplace=True)
+            elif (2 < num_unique <= ONEHOT_MAX_UNIQUE_VALUES):
+                df_X.rename(columns={col:('c_'+col)}, inplace=True)
+            else:
+                df_X.rename(columns={col:('r_'+col)}, inplace=True)
+
+        else:
+            df_X.rename(columns={col:('c_'+col)}, inplace=True)
+    return constant_values, df_X
+
+
+def replace_na_and_create_na_feature(df_X):
+    # создаине NA признаков
+    for col in df_X.columns:
+        if df[col].isna().any():
+            df_X[col + '_NA'] = (df_X[col].isna()).astype(int)
+
+    # замена NA модой и средним
+    from scipy.stats import mode
+    for col in df_X.columns:
+        if col[:2] == 'r_':
+            df_X[col].fillna(np.mean(df_X[col]), inplace=True)
+        if col[:2] == 'c_':
+            df_X[col].fillna(mode(df_X[col])[0][0], inplace=True)
+        if col[:2] == 'd_':
+            df_X[col].fillna(0, inplace=True)
+
+    return df_X
