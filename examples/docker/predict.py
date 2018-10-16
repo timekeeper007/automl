@@ -31,10 +31,8 @@ if __name__ == '__main__':
         # features from datetime
         df = transform_datetime_features(df)
 
-        # categorical encoding
-        for col_name, unique_values in model_config['categorical_values'].items():
-            for unique_value in unique_values:
-                df['onehot_{}={}'.format(col_name, unique_value)] = (df[col_name] == unique_value).astype(int)
+        # categorical onehot encoding
+        df = onehot_encoding_test(df, model_config['categorical_to_onehot'])
 
     # missing values
     if model_config['missing']:

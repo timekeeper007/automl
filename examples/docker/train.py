@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    df = pd.read_csv(args.train_csv,  low_memory =False)
+    df = pd.read_csv(args.train_csv)
     df_y = df.target
     df_X = df.drop('target', axis=1)
     is_big = df_X.memory_usage().sum() > BIG_DATASET_SIZE
@@ -61,23 +61,29 @@ if __name__ == '__main__':
         df_X = df_X[new_columns]
 
     else:
-        # features from datetime
-        df_X = transform_datetime_features(df_X)
 
-        # categorical encoding
-        categorical_values = {}
-        for col_name in list(df_X.columns):
-            col_unique_values = df_X[col_name].unique()
-            if 2 < len(col_unique_values) <= ONEHOT_MAX_UNIQUE_VALUES:
-                categorical_values[col_name] = col_unique_values
-                for unique_value in col_unique_values:
-                    df_X['onehot_{}={}'.format(col_name, unique_value)] = (df_X[col_name] == unique_value).astype(int)
-        model_config['categorical_values'] = categorical_values
+        # rename c_, d_, r_
 
         # missing values
         if any(df_X.isnull()):
             model_config['missing'] = True
             df_X.fillna(-1, inplace=True)
+
+
+        # features from datetime
+        df_X = transform_datetime_features(df_X)
+
+
+
+        # categorical encoding
+        model_config['categorical_to_onehot'], df_X = onehot_encoding_train(df_X, ONEHOT_MAX_UNIQUE_VALUES)
+        model_config['important_dummies'] = select_important_dummies(df_X, y, args.mode, importance=0.05, n_estimators=10)
+
+
+        # real
+
+
+
 
     # use only numeric columns
     used_columns = [
