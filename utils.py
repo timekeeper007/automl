@@ -53,7 +53,7 @@ def select_important_dummies(df_x, y, mode, importance=0.05, n_estimators=10):
         from sklearn.ensemble import RandomForestClassifier
         rf = RandomForestClassifier(n_estimators=n_estimators)
 
-    dummies = [col for col in df_x.columns if df_x[col].unique().shape[0] == 2]
+    dummies = [col for col in df_x.columns if col[:2] == 'd_']
     rf.fit(df_x[dummies], y)
     important_features = pd.Series(dummies)[
         (rf.feature_importances_ / rf.feature_importances_.max() > importance)].tolist()
@@ -64,7 +64,7 @@ def onehot_encoding_train(df_x, ONEHOT_MAX_UNIQUE_VALUES):
     categorical_values = {}
     for col_name in list(df_x.columns):
         col_unique_values = df_x[col_name].unique()
-        if 2 < len(col_unique_values) <= ONEHOT_MAX_UNIQUE_VALUES:
+        if col_name[:2] == 'c_':
             categorical_values[col_name] = col_unique_values
             for unique_value in col_unique_values:
                 df_x['onehot_{}={}'.format(col_name, unique_value)] = (df_x[col_name] == unique_value).astype(int)
@@ -92,13 +92,14 @@ def add_prefix_to_colnames(df_x, ONEHOT_MAX_UNIQUE_VALUES=6):
 
         else:
             df_x.rename(columns={col: ('c_' + col)}, inplace=True)
-    return constant_values, df_x
+    return df_x
 
 
 def replace_na_and_create_na_feature(df_x):
+    import numpy as np
     # create colname_NA dummi column
     for col in df_x.columns:
-        if df[col].isna().any():
+        if df_x[col].isna().any():
             df_x[col + '_NA'] = (df_x[col].isna()).astype(int)
 
     # replace NA with mean or mode
@@ -307,6 +308,8 @@ def numeric_feature_extraction(df, degree=4, num_mult=True):
     return df
 
 # ФУНКЦИИ ДЛЯ РАБОТЫ С ВРЕМЕННЫМИ ДАННЫМИ:
+
+import pandas as pd
 
 # справочник выходных и праздничных дней с 1999 до 2025 гг.
 
