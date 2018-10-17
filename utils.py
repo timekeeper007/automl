@@ -1,6 +1,7 @@
 import math
 import re
 import datetime
+import calendar
 
 from scipy import stats
 
@@ -68,6 +69,7 @@ def onehot_encoding_train(df_x, ONEHOT_MAX_UNIQUE_VALUES):
             for unique_value in col_unique_values:
                 df_x['onehot_{}={}'.format(col_name, unique_value)] = (df_x[col_name] == unique_value).astype(int)
     return categorical_values, df_x
+
 
 
 def onehot_encoding_test(df, categorical_to_onehot):
@@ -304,4 +306,123 @@ def numeric_feature_extraction(df, degree=4, num_mult=True):
 
     return df
 
-### <--- Utils for working with real features
+# ФУНКЦИИ ДЛЯ РАБОТЫ С ВРЕМЕННЫМИ ДАННЫМИ:
+
+# справочник выходных и праздничных дней с 1999 до 2025 гг.
+
+work_days = pd.read_csv('work.csv', encoding='1251', index_col='Год/Месяц')
+
+# словарь национальный праздников РФ
+
+dict_hol = {101: 'НГ', 102: 'НГ', 103: 'НГ', 104: 'НГ', 105: 'НГ', 106: 'НГ',
+            107: 'Рожд', 223: '23фев', 308: '8мар', 501: '1мая', 509: '9мая', 612: '12ию', 114: '4ноя'}
+
+
+# признаки из дейттайм
+
+def datefeatures(df, i='index', date=0, time=1, dist=1):
+    dataframe = pd.DataFrame(df)
+
+    # признаки из дат
+
+    if date == 0:
+
+        # номер года
+
+        dataframe[i + '_year'] = df.dt.year
+
+        # номер месяца
+
+        dataframe[i + '_mnth'] = df.dt.month
+
+        # номер недели
+
+        dataframe[i + '_week'] = df.dt.week
+
+        # 1 декада?
+
+        dataframe[i + '_is_dcd1'] = df.map(lambda x: 1 if x.date().day < 11 else 0)
+
+        # 2 декада?
+
+        dataframe[i + '_is_dcd2'] = df.map(lambda x: 1 if 10 < x.date().day < 21 else 0)
+
+        # номер дня недели
+
+        dataframe[i + '_dow'] = df.apply(lambda x: x.date().weekday())
+
+        # номер дня месяца (ВНИМАНИЕ! большая нагрузка на память при переходе к дамми)
+
+        dataframe[i + '_day'] = df.dt.day
+
+        # сб или вс?
+
+        dataframe[i + '_is_eow'] = df.apply(lambda x: 1 if x.date().weekday() in (5, 6) else 0)
+
+        # выходной (1999-2025 гг.)?
+
+        try:
+            dataframe[i + '_is_wknd'] = dataframe[i].apply(
+                lambda x: int(str(x.day) in work_days[str(x.month)][x.year].split(',')))
+        except:
+            pass
+
+        # национальные праздники
+
+        dataframe[i + '_ruhol'] = dataframe[i].map(
+            lambda x: dict_hol[x.month * 100 + x.day] if dict_hol.get(x.month * 100 + x.day) else 'нет')
+
+        # при необходимости сохранить дистанции
+
+        if dist == 1:
+            # день месяца в sin, cos
+
+            dataframe[i + '_day_cos'] = df.apply(lambda x: make_harmonic_features(x.day, \
+                                                                                  calendar.monthrange(x.year, x.month)[
+                                                                                      1])[0])
+            dataframe[i + '_day_sin'] = df.apply(lambda x: make_harmonic_features(x.day, \
+                                                                                  calendar.monthrange(x.year, x.month)[
+                                                                                      1])[1])
+
+            # номер месяца в sin, cos
+
+            dataframe[i + '_mnth_cos'] = make_harmonic_features(df.dt.month, 12)[0]
+            dataframe[i + '_mnth_sin'] = make_harmonic_features(df.dt.month, 12)[1]
+
+    # признаки из времени
+
+    if time == 0:
+
+        # час
+
+        dataframe[i + '_hr'] = df.dt.hour
+
+        # минута
+
+        dataframe[i + '_mnt'] = df.dt.minute
+
+        # секунда
+
+        dataframe[i + '_sec'] = df.dt.second
+
+        # при необходимости сохранить дистанции
+
+        if dist == 0:
+            # час в sin, cos
+
+            dataframe[i + '_hr_cos'] = df.apply(lambda x: make_harmonic_features(x.hour, 24)[0])
+            dataframe[i + '_hr_sin'] = df.apply(lambda x: make_harmonic_features(x.hour, 24)[1])
+
+            # минута в sin, cos
+
+            dataframe[i + '_mnt_cos'] = df.apply(lambda x: make_harmonic_features(x.minute, 60)[0])
+            dataframe[i + '_mnt_sin'] = df.apply(lambda x: make_harmonic_features(x.minute, 60)[1])
+
+    return dataframe[dataframe.columns[1:]]
+
+
+# эзотерический подход
+
+def make_harmonic_features(value, period):
+    value *= 2 * np.pi / period
+    return np.cos(value), np.sin(value)
