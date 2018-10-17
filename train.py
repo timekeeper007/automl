@@ -89,7 +89,7 @@ if __name__ == '__main__':
         # Hyperparameters. degree: int (max degree of polynoms included)
         # num_mult: True for all multiplications, False for multiplications with dummies only
         print("df_X shape before real: " + str(df_X.shape))
-        utils.numeric_feature_extraction(df_X, degree=4, num_mult=True)
+        df_X = utils.numeric_feature_extraction(df_X, degree=4, num_mult=True)
 
 
 
