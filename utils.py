@@ -446,4 +446,4 @@ def transform_datetime_features(train):
         dfd_feat = dfd_feat.join(df_temp, how='outer')
         df_temp.drop(df_temp.index, inplace=True)
 
-    return dfd_feat
+    return train.join(dfd_feat, how='outer')

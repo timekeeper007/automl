@@ -67,22 +67,22 @@ if __name__ == '__main__':
         # rename c_, d_, r_
         df_X = utils.add_prefix_to_colnames(df_X, ONEHOT_MAX_UNIQUE_VALUES)
 
-        print("df_X shape before na replacement: " + str(df_X.shape))
         # missing values
+        print("df_X shape before na replacement: " + str(df_X.shape))
         df_X = utils.replace_na_and_create_na_feature(df_X)
 
-        # print("df_X shape before adding datetime features: " + str(df_X.shape))
         # features from datetime
-        # df_X = utils.transform_datetime_features(df_X)
+        print("df_X shape before adding datetime features: " + str(df_X.shape))
+        df_X = utils.transform_datetime_features(df_X)
 
 
 
-        print("df_X shape before onehot: " + str(df_X.shape))
         # categorical encoding
+        print("df_X shape before onehot: " + str(df_X.shape))
         model_config['categorical_to_onehot'], df_X = utils.onehot_encoding_train(df_X, ONEHOT_MAX_UNIQUE_VALUES)
-        print("df_X shape before selecting dummies: " + str(df_X.shape))
 
         # selecting dummies using Random Forest
+        print("df_X shape before selecting dummies: " + str(df_X.shape))
         model_config['important_dummies'] = utils.select_important_dummies(df_X, df_y, args.mode, importance=0.05, n_estimators=10)
 
         # real
