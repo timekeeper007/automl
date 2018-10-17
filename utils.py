@@ -42,7 +42,8 @@ def select_important_dummies(df_x, y, mode, importance=0.05, n_estimators=10):
     rf.fit(df_x[dummies], y)
     important_features = pd.Series(dummies)[
         (rf.feature_importances_ / rf.feature_importances_.max() > importance)].tolist()
-    return important_features
+    drop_features = list(set(dummies) - set(important_features))
+    return important_features, df_x.drop(drop_features, axis=1)
 
 
 def onehot_encoding_train(df_x, ONEHOT_MAX_UNIQUE_VALUES):
@@ -52,7 +53,7 @@ def onehot_encoding_train(df_x, ONEHOT_MAX_UNIQUE_VALUES):
         if col_name[:2] == 'c_':
             categorical_values[col_name] = col_unique_values
             for unique_value in col_unique_values:
-                df_x['onehot_{}={}'.format(col_name, unique_value)] = (df_x[col_name] == unique_value).astype(int)
+                df_x['d_onehot_{}={}'.format(col_name, unique_value)] = (df_x[col_name] == unique_value).astype(int)
     return categorical_values, df_x
 
 

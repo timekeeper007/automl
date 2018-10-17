@@ -37,12 +37,7 @@ if __name__ == '__main__':
 
     if not model_config['is_big']:
         # features from datetime
-<<<<<<< HEAD
-        df = df.join(transform_datetime_features(df), how='outer')
-
-=======
         df = utils.transform_datetime_features(df)
->>>>>>> 949080e29dcc3ce0fb9a085be55b957f893c86f3
 
         # categorical onehot encoding
         df = utils.onehot_encoding_test(df, model_config['categorical_to_onehot'])
