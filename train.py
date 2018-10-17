@@ -8,7 +8,7 @@ import time
 from sklearn.linear_model import Ridge, LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
-from utils import transform_datetime_features
+import utils
 
 # use this to stop the algorithm before time limit exceeds
 TIME_LIMIT = int(os.environ.get('TIME_LIMIT', 5*60))
@@ -63,24 +63,33 @@ if __name__ == '__main__':
 
     else:
 
+        print("df_X shape before prefix: " + str(df_X.shape))
         # rename c_, d_, r_
-        df_X = add_prefix_to_colnames(df_X, ONEHOT_MAX_UNIQUE_VALUES)
+        df_X = utils.add_prefix_to_colnames(df_X, ONEHOT_MAX_UNIQUE_VALUES)
         # missing values
-        df_X = replace_na_and_create_na_feature(df_X)
-
+        print("df_X shape before na replacement: " + str(df_X.shape))
+        df_X = utils.replace_na_and_create_na_feature(df_X)
 
         # features from datetime
-        df_X = transform_datetime_features(df_X)
+        print("df_X shape before adding datetime features: " + str(df_X.shape))
+        df_X = utils.transform_datetime_features(df_X)
 
 
 
         # categorical encoding
-        model_config['categorical_to_onehot'], df_X = onehot_encoding_train(df_X, ONEHOT_MAX_UNIQUE_VALUES)
-        model_config['important_dummies'] = select_important_dummies(df_X, y, args.mode, importance=0.05, n_estimators=10)
+        print("df_X shape before onehot: " + str(df_X.shape))
+        model_config['categorical_to_onehot'], df_X = utils.onehot_encoding_train(df_X, ONEHOT_MAX_UNIQUE_VALUES)
 
-
+        # selecting dummies using Random Forest
+        print("df_X shape before selecting dummies: " + str(df_X.shape))
+        model_config['important_dummies'], df_X = utils.select_important_dummies(df_X, df_y, args.mode, importance=0.05, n_estimators=10)
+        print("df_X shape agter selecting dummies: " + str(df_X.columns))
         # real
-
+        # transform df with numeric and dummy features by adding new features: x^2...x^k, log(x), 1/x, x1/x2, x1*x2.
+        # Hyperparameters. degree: int (max degree of polynoms included)
+        # num_mult: True for all multiplications, False for multiplications with dummies only
+        print("df_X shape before real: " + str(df_X.shape))
+        df_X = utils.numeric_feature_extraction(df_X, degree=4, num_mult=True)
 
 
 
@@ -88,12 +97,13 @@ if __name__ == '__main__':
     used_columns = [
         col_name
         for col_name in df_X.columns
-        if col_name.startswith('number') or col_name.startswith('onehot')
+        if col_name.startswith('r_') or col_name.startswith('d_')
         ]
     df_X = df_X[used_columns].values
     model_config['used_columns'] = used_columns
 
     # scaling
+    print("df_X shape before scaling: "+ str(df_X.shape))
     scaler = StandardScaler(copy=False)
     df_X = scaler.fit_transform(df_X)
     model_config['scaler'] = scaler
