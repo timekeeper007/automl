@@ -5,7 +5,7 @@ import pickle
 import time
 import numpy as np
 
-from utils import transform_datetime_features
+import utils
 
 # use this to stop the algorithm before time limit exceeds
 TIME_LIMIT = int(os.environ.get('TIME_LIMIT', 5*60))
@@ -31,17 +31,21 @@ if __name__ == '__main__':
     # drop train constant values
     df.drop(model_config['constant_columns'], axis=1, inplace=True)
     # rename c_, d_, r_
-    df_X = add_prefix_to_colnames(df_X, ONEHOT_MAX_UNIQUE_VALUES)
+    df_X = utils.add_prefix_to_colnames(df_X, ONEHOT_MAX_UNIQUE_VALUES)
     # missing values
-    df_X = replace_na_and_create_na_feature(df_X)
+    df_X = utils.replace_na_and_create_na_feature(df_X)
 
     if not model_config['is_big']:
         # features from datetime
+<<<<<<< HEAD
         df = df.join(transform_datetime_features(df), how='outer')
 
+=======
+        df = utils.transform_datetime_features(df)
+>>>>>>> 949080e29dcc3ce0fb9a085be55b957f893c86f3
 
         # categorical onehot encoding
-        df = onehot_encoding_test(df, model_config['categorical_to_onehot'])
+        df = utils.onehot_encoding_test(df, model_config['categorical_to_onehot'])
 
         # real number feature extraction
 
