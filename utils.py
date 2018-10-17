@@ -293,60 +293,68 @@ def numeric_feature_extraction(df, degree=4, num_mult=True):
     return df
 
 
-# ФУНКЦИИ ДЛЯ РАБОТЫ С ВРЕМЕННЫМИ ДАННЫМИ:
+# FUNCTIONS FOR DATETIME TRANSFORMATION:
 
-# справочник выходных и праздничных дней с 1999 до 2025 гг.
+# dict of non-working days (1999-2025)
 
 work_days = pd.read_csv('work.csv', encoding='1251', index_col='Год/Месяц')
 
-# словарь национальный праздников РФ
+# dict of rus national holidays
 
 dict_hol = {101: 'НГ', 102: 'НГ', 103: 'НГ', 104: 'НГ', 105: 'НГ', 106: 'НГ',
             107: 'Рожд', 223: '23фев', 308: '8мар', 501: '1мая', 509: '9мая', 612: '12ию', 114: '4ноя'}
 
 
-# признаки из дейттайм
-
 def datefeatures(df, i='index', date=0, time=1, dist=1):
+    """
+    Generates features from datetime variables
+    :param df:
+    :param i:
+    :param date:
+    :param time:
+    :param dist:
+    :return:
+    """
+
     dataframe = pd.DataFrame(df)
 
-    # признаки из дат
+    # features from dates
 
     if date == 0:
 
-        # номер года
+        # year number
 
         dataframe['c_' + i + '_year'] = df.dt.year
 
-        # номер месяца
+        # month number
 
         dataframe['c_' + i + '_mnth'] = df.dt.month
 
-        # номер недели
+        # week number
 
         dataframe['r_' + i + '_week'] = df.dt.week
 
-        # 1 декада?
+        # is 1-st decade
 
         dataframe['d_' + i + '_is_dcd1'] = df.map(lambda x: 1 if x.date().day < 11 else 0)
 
-        # 2 декада?
+        # is 2-snd decade
 
         dataframe['d_' + i + '_is_dcd2'] = df.map(lambda x: 1 if 10 < x.date().day < 21 else 0)
 
-        # номер дня недели
+        # weekday number
 
         dataframe['c_' + i + '_dow'] = df.apply(lambda x: x.date().weekday())
 
-        # номер дня месяца (ВНИМАНИЕ! большая нагрузка на память при переходе к дамми)
+        # monthday number
 
         dataframe['c_' + i + '_day'] = df.dt.day
 
-        # сб или вс?
+        # is end of week
 
         dataframe['d_' + i + '_is_eow'] = df.apply(lambda x: 1 if x.date().weekday() in (5, 6) else 0)
 
-        # выходной (1999-2025 гг.)?
+        # is non-working day (1999-2025)
 
         try:
             dataframe['d_' + i + '_is_wknd'] = dataframe[i].apply(
@@ -354,53 +362,55 @@ def datefeatures(df, i='index', date=0, time=1, dist=1):
         except:
             pass
 
-        # национальные праздники
+        # rus national holidays
 
         dataframe['c_' + i + '_ruhol'] = dataframe[i].map(
             lambda x: dict_hol[x.month * 100 + x.day] if dict_hol.get(x.month * 100 + x.day) else 'нет')
 
-        # при необходимости сохранить дистанции
+        # if necessary to keep distances
 
         if dist == 1:
-            # день месяца в sin, cos
+            # day number to sin, cos
 
-            dataframe['r_' + i + '_day_cos'] = df.apply(lambda x: make_harmonic_features(x.day, \
-                                                                                  calendar.monthrange(x.year, x.month)[
-                                                                                      1])[0])
-            dataframe['r_' + i + '_day_sin'] = df.apply(lambda x: make_harmonic_features(x.day, \
-                                                                                  calendar.monthrange(x.year, x.month)[
-                                                                                      1])[1])
+            dataframe['r_' + i + '_day_cos'] = df.apply(lambda x: make_harmonic_features(x.day,
+                                                                                         calendar.monthrange(x.year,
+                                                                                                             x.month)[
+                                                                                             1])[0])
+            dataframe['r_' + i + '_day_sin'] = df.apply(lambda x: make_harmonic_features(x.day,
+                                                                                         calendar.monthrange(x.year,
+                                                                                                             x.month)[
+                                                                                             1])[1])
 
-            # номер месяца в sin, cos
+            # month number to sin, cos
 
             dataframe['r_' + i + '_mnth_cos'] = make_harmonic_features(df.dt.month, 12)[0]
             dataframe['r_' + i + '_mnth_sin'] = make_harmonic_features(df.dt.month, 12)[1]
 
-    # признаки из времени
+    # features from time
 
     if time == 0:
 
-        # час
+        # hour
 
         dataframe['r_' + i + '_hr'] = df.dt.hour
 
-        # минута
+        # minute
 
         dataframe['r_' + i + '_mnt'] = df.dt.minute
 
-        # секунда
+        # second
 
         dataframe['r_' + i + '_sec'] = df.dt.second
 
-        # при необходимости сохранить дистанции
+        # if necessary to keep distances
 
         if dist == 0:
-            # час в sin, cos
+            # hour to sin, cos
 
             dataframe['r_' + i + '_hr_cos'] = df.apply(lambda x: make_harmonic_features(x.hour, 24)[0])
             dataframe['r_' + i + '_hr_sin'] = df.apply(lambda x: make_harmonic_features(x.hour, 24)[1])
 
-            # минута в sin, cos
+            # minute to sin, cos
 
             dataframe['r_' + i + '_mnt_cos'] = df.apply(lambda x: make_harmonic_features(x.minute, 60)[0])
             dataframe['r_' + i + '_mnt_sin'] = df.apply(lambda x: make_harmonic_features(x.minute, 60)[1])
@@ -408,21 +418,28 @@ def datefeatures(df, i='index', date=0, time=1, dist=1):
     return dataframe[dataframe.columns[1:]]
 
 
-# эзотерический подход
-
 def make_harmonic_features(value, period):
+    """
+    Esoteric approach
+    :param value:
+    :param period:
+    :return:
+    """
     value *= 2 * np.pi / period
     return np.cos(value), np.sin(value)
 
 
-# головная функция
-
 def transform_datetime_features(train):
+    """
+    Head function. Integrates all datetime processing
+    :param train:
+    :return:
+    """
     dfd = train.filter(regex='date*').apply(pd.to_datetime)
 
     dfd_columns = dfd.columns
 
-    # дополнительно разности дат, если несколько полей с датами
+    # date differences
 
     if dfd.shape[1] > 0:
 
@@ -431,11 +448,11 @@ def transform_datetime_features(train):
                 dfd['r_diffdate_' + str(i) + '_' + str(j)] = (dfd[dfd_columns[i]] - dfd[j]).dt.seconds // 60 + (
                         dfd[dfd_columns[i]] - dfd[j]).dt.days * 24 * 60
 
-    # шаблон с индексами исходного
+    # template with indexes
 
     dfd_feat = pd.DataFrame(index=dfd.index)
 
-    # утилита работает постолбчато
+    # YTNJINTA PA6OTAET IIOCTOJI64ATO
 
     for feat in dfd_columns:
         df_temp = (datefeatures(dfd[feat], i=feat,
@@ -443,7 +460,7 @@ def transform_datetime_features(train):
                                     '00:00:00').date()),
                                 time=(dfd[feat].iloc[0].time() == dfd[feat].iloc[-1].time() == pd.to_datetime(
                                     '2000-01-01').time()),
-                                dist=1))
+                                dist=0))
         dfd_feat = dfd_feat.join(df_temp, how='outer')
         df_temp.drop(df_temp.index, inplace=True)
 
