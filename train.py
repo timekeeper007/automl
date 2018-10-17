@@ -8,7 +8,7 @@ import time
 from sklearn.linear_model import Ridge, LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
-from utils import transform_datetime_features
+import utils
 
 # use this to stop the algorithm before time limit exceeds
 TIME_LIMIT = int(os.environ.get('TIME_LIMIT', 5*60))
@@ -64,22 +64,25 @@ if __name__ == '__main__':
     else:
 
         # rename c_, d_, r_
-        df_X = add_prefix_to_colnames(df_X, ONEHOT_MAX_UNIQUE_VALUES)
+        df_X = utils.add_prefix_to_colnames(df_X, ONEHOT_MAX_UNIQUE_VALUES)
         # missing values
-        df_X = replace_na_and_create_na_feature(df_X)
+        df_X = utils.replace_na_and_create_na_feature(df_X)
 
 
         # features from datetime
-        df_X = transform_datetime_features(df_X)
+        df_X = utils.transform_datetime_features(df_X)
 
 
 
         # categorical encoding
-        model_config['categorical_to_onehot'], df_X = onehot_encoding_train(df_X, ONEHOT_MAX_UNIQUE_VALUES)
-        model_config['important_dummies'] = select_important_dummies(df_X, y, args.mode, importance=0.05, n_estimators=10)
-
+        model_config['categorical_to_onehot'], df_X = utils.onehot_encoding_train(df_X, ONEHOT_MAX_UNIQUE_VALUES)
+        model_config['important_dummies'] = utils.select_important_dummies(df_X, y, args.mode, importance=0.05, n_estimators=10)
 
         # real
+        # transform df with numeric and dummy features by adding new features: x^2...x^k, log(x), 1/x, x1/x2, x1*x2.
+        # Hyperparameters. degree: int (max degree of polynoms included)
+        # num_mult: True for all multiplications, False for multiplications with dummies only
+        utils.numeric_feature_extraction(df, degree=4, num_mult=True)
 
 
 

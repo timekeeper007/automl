@@ -1,4 +1,8 @@
+import math
+import re
 import datetime
+
+from scipy import stats
 
 
 def parse_dt(x):
@@ -29,8 +33,18 @@ def transform_datetime_features(df):
     return df
 
 
-# функция берет на вход данные (X,y) и возвращает полезные дамми
-def select_important_dummies(df_X, y, mode, importance=0.05, n_estimators=10):
+def select_important_dummies(df_x, y, mode, importance=0.05, n_estimators=10):
+    '''This function selects important features among all dummies using
+    RandomForest method feature_importances_(from sklearn)
+    Inputs:
+     - param df_x: pd.DataFrame without target
+     - param y: target
+     - param mode: classification or regression
+     - param importance: by this parameter function filters features by
+     its level of importance. Function return all features with importance = 0
+     - param n_estimators: amount of trees in RandomForest
+    Output: selected most important features
+    '''
     if mode == 'regression':
         from sklearn.ensemble import RandomForestRegressor
         rf = RandomForestRegressor(n_estimators=n_estimators)
@@ -38,21 +52,23 @@ def select_important_dummies(df_X, y, mode, importance=0.05, n_estimators=10):
         from sklearn.ensemble import RandomForestClassifier
         rf = RandomForestClassifier(n_estimators=n_estimators)
 
-    dummies = [col for col in df_X.columns if df_X[col].unique().shape[0] == 2]
-    rf.fit(df_X[dummies], y)
+    dummies = [col for col in df_x.columns if df_x[col].unique().shape[0] == 2]
+    rf.fit(df_x[dummies], y)
     important_features = pd.Series(dummies)[
         (rf.feature_importances_ / rf.feature_importances_.max() > importance)].tolist()
     return important_features
 
-def onehot_encoding_train(df_X, ONEHOT_MAX_UNIQUE_VALUES):
+
+def onehot_encoding_train(df_x, ONEHOT_MAX_UNIQUE_VALUES):
     categorical_values = {}
-    for col_name in list(df_X.columns):
-        col_unique_values = df_X[col_name].unique()
+    for col_name in list(df_x.columns):
+        col_unique_values = df_x[col_name].unique()
         if 2 < len(col_unique_values) <= ONEHOT_MAX_UNIQUE_VALUES:
             categorical_values[col_name] = col_unique_values
             for unique_value in col_unique_values:
-                df_X['onehot_{}={}'.format(col_name, unique_value)] = (df_X[col_name] == unique_value).astype(int)
-    return categorical_values, df_X
+                df_x['onehot_{}={}'.format(col_name, unique_value)] = (df_x[col_name] == unique_value).astype(int)
+    return categorical_values, df_x
+
 
 def onehot_encoding_test(df, categorical_to_onehot):
     for col_name, unique_values in categorical_to_onehot.items():
@@ -61,36 +77,231 @@ def onehot_encoding_test(df, categorical_to_onehot):
     return df
 
 
-def add_prefix_to_colnames(df_X, ONEHOT_MAX_UNIQUE_VALUES=6):
-    for col in df_X.columns:
-        num_unique = df_X[col].nunique()
-        if df_X[col].dtype.name.startswith('int') | df_X[col].dtype.name.startswith('float'):
+def add_prefix_to_colnames(df_x, ONEHOT_MAX_UNIQUE_VALUES=6):
+    for col in df_x.columns:
+        num_unique = df_x[col].nunique()
+        if df_x[col].dtype.name.startswith('int') | df_x[col].dtype.name.startswith('float'):
             if num_unique == 2:
-                df_X.rename(columns={col:('d_'+col)}, inplace=True)
+                df_x.rename(columns={col: ('d_' + col)}, inplace=True)
             elif (2 < num_unique <= ONEHOT_MAX_UNIQUE_VALUES):
-                df_X.rename(columns={col:('c_'+col)}, inplace=True)
+                df_x.rename(columns={col: ('c_' + col)}, inplace=True)
             else:
-                df_X.rename(columns={col:('r_'+col)}, inplace=True)
+                df_x.rename(columns={col: ('r_' + col)}, inplace=True)
 
         else:
-            df_X.rename(columns={col:('c_'+col)}, inplace=True)
-    return constant_values, df_X
+            df_x.rename(columns={col: ('c_' + col)}, inplace=True)
+    return constant_values, df_x
 
 
-def replace_na_and_create_na_feature(df_X):
-    # создаине NA признаков
-    for col in df_X.columns:
+def replace_na_and_create_na_feature(df_x):
+    # create colname_NA dummi column
+    for col in df_x.columns:
         if df[col].isna().any():
-            df_X[col + '_NA'] = (df_X[col].isna()).astype(int)
+            df_x[col + '_NA'] = (df_x[col].isna()).astype(int)
 
-    # замена NA модой и средним
+    # replace NA with mean or mode
     from scipy.stats import mode
-    for col in df_X.columns:
+    for col in df_x.columns:
         if col[:2] == 'r_':
-            df_X[col].fillna(np.mean(df_X[col]), inplace=True)
+            df_x[col].fillna(np.mean(df_x[col]), inplace=True)
         if col[:2] == 'c_':
-            df_X[col].fillna(mode(df_X[col])[0][0], inplace=True)
+            df_x[col].fillna(mode(df_x[col])[0][0], inplace=True)
         if col[:2] == 'd_':
-            df_X[col].fillna(0, inplace=True)
+            df_x[col].fillna(0, inplace=True)
 
-    return df_X
+    return df_x
+
+
+### ---> Utils for working with real features
+
+def num_features_list(df):
+    """list of numeric features according to mask 'r_'
+    """
+    return [col for col in df if re.match('r_', col)]
+
+
+def dummy_features_list(df):
+    """list of dummy features according to mask 'd_'
+    """
+    return [col for col in df if re.match('d_', col)]
+
+
+def add_polynoms(df, col, degree):
+    """make and add polynoms from Series df[col] up to some "degree".
+    Inputs:
+     - df: DataFrame,
+     - col: title of the numeric feature (string),
+     - degree: the maximum degree of polynom
+    Output: df with new features
+    """
+    # Add polynom feature and name them: 'number_xxx_poly_deg_i'
+    for i in range(2, degree + 1):
+        df[col + '_poly_deg_{}'.format(i)] = df[col] ** i
+    return df
+
+
+def add_log(df, col):
+    """make and add logarithm from Series df[col]: log(x)
+    Inputs:
+     - df: DataFrame,
+     - col: title of the numeric feature (string).
+    Output: df with new features
+    """
+    # Check positivity and lognormality.
+    if df[col].min() > 0 and check_norm_shapiro(df[col].apply(lambda x: math.log(x))):
+        # Add logarithm log(ser) feature and name it: 'number_xxx_log'
+        df[col + '_log'] = df[col].apply(lambda x: math.log(x))
+    return df
+
+
+def add_exp(df, col):
+    """make and add exponent from Series df[col]: exp(x))
+    Inputs:
+     - df: DataFrame,
+     - col: title of the numeric feature (string).
+    Output: df with new features
+    """
+    try:
+        # Add logarithm log(1 + ser) feature and name it: 'number_xxx_exp'
+        df[col + '_exp'] = df[col].apply(lambda x: math.exp(x))
+    except OverflowError:
+        pass
+
+    return df
+
+
+def add_recip(df, col):
+    """make and add reciprocal from Series df[col]): 1/x
+    Inputs:
+     - df: DataFrame,
+     - col: title of the numeric feature (string).
+    Output: df with new features
+    """
+    # Check positivity of values.
+    if df[col].min() > 0:
+        # Add logarithm log(1 + ser) feature and name it: 'number_xxx_recip'
+        df[col + '_recip'] = df[col].apply(recip)
+    return df
+
+
+def recip(x):
+    """make reciprocal
+    """
+    try:
+        return 1. / x
+    except:
+        return None
+
+
+def add_fractions(df, num_feats, col):
+    """make and add fractions with all other numeric features.
+    Inputs:
+     - df: DataFrame,
+     - num_feats: list of original numeric features,
+     - col: title of the numeric feature (string).
+    Output: df with new features
+    """
+    for col2 in df[num_feats].drop(col, axis=1):
+        # Check positivity of values.
+        if df[col2].min() > 0:
+            df[col + '_frac_{}'.format(col2)] = df[col] / df[col2]
+
+    return df
+
+
+def add_multiplications(df, num_feats, dummy_feats, col, num_mult=True):
+    """make and add multiplicative interactions with all other features.
+    Inputs:
+     - df: DataFrame,
+     - num_feats: list of numeric features,
+     - dummy_feats: list of dummy features,
+     - col: title of the feature (string),
+     - num_mult: True if only dummy interactions, False if both dummy and numeric interactions.
+    Output: df with new features
+    """
+    if num_mult == True:
+        feats_for_mult = dummy_feats + num_feats
+
+        for col2 in df[feats_for_mult].drop(col, axis=1):
+            df[col + '_mult_{}'.format(col2)] = df[col] * df[col2]
+    else:
+        feats_for_mult = dummy_feats
+
+        for col2 in df[feats_for_mult]:
+            df[col + '_mult_{}'.format(col2)] = df[col] * df[col2]
+
+    return df
+
+
+def check_norm_shapiro(x, alpha=0.05):
+    """
+    Perform the Shapiro-Wilk test for normality.
+    The Shapiro-Wilk test tests the null hypothesis that the data was drawn from a normal distribution.
+    Parameters:
+        x : array_like (Array of sample data).
+        alpha: float (Significance level).
+    Returns:
+        True: if data seems to be drawn from normal dist.
+        False: otherwise.
+
+    For reference:
+    stats.shapiro(x) returns:
+        W : float (The test statistic).
+        p-value : float (The p-value for the hypothesis test).
+    """
+    # If p-value is less than significance level alpha => reject H0 about normality
+    if stats.shapiro(x)[1] < alpha:
+        return False
+    else:
+        return True
+
+
+def numeric_feature_extraction(df, degree=4, num_mult=True):
+    """transform df with numeric and dummy features by adding new features:
+    polynoms, logarithm, reciprocal, fractions and multiplicaations.
+    Input:
+        - df
+        - degree: int (max degree of polynoms included)
+        - num_mult: True for all multiplications, False for multiplications with dummies only
+    Output: df with new features
+    """
+    # Parse column titles and make lists of numeric and dummy features.
+    num_feats = num_features_list(df)
+    dummy_feats = dummy_features_list(df)
+    all_feats = num_feats + dummy_feats
+    df = pd.DataFrame(df, columns=all_feats)
+
+    #     # Fill NaN with mean values.
+    #     df = df.fillna(df.mean())
+
+    # Convert to float.
+    df = df.applymap(lambda x: float(x))
+
+    # Add features to DataFrame.
+    for col in df[num_feats]:
+        # Add polynom feature and name them: 'number_<xxx>_poly_deg_<i>'.
+        add_polynoms(df, col, degree)  # the last argument is the maximum degree of the polynom
+
+        # Add logarithm feature and name it: 'number_<xxx>_log'.
+        # Only positive columns with lognormality!!!
+        add_log(df, col)
+
+        #         # Add exponent feature and name it: 'number_<xxx>_exp'.
+        #         add_exp(df, col)
+
+        # Add reciprocal feature and name it: 'number_<xxx>_recip'.
+        # Only positive columns!!!
+        add_recip(df, col)
+
+        # Add fractions with all other numeric features and name it: 'number_<xxx>_frac_<yyy>'
+        # Only positive columns!!!
+        add_fractions(df, num_feats, col)
+
+        # Add multiplications with all other features and name it: 'number_<xxx>_mult_<yyy>'
+        # num_mult = True for all multiplications
+        # num_mult = False for multiplications with dummies only
+        add_multiplications(df, num_feats, dummy_feats, col, num_mult)
+
+    return df
+
+### <--- Utils for working with real features
