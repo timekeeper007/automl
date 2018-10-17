@@ -2,6 +2,8 @@ import math
 import re
 import datetime
 import calendar
+import pandas as pd
+import numpy as np
 
 from scipy import stats
 
@@ -17,21 +19,21 @@ def parse_dt(x):
         return None
 
 
-def transform_datetime_features(df):
-    datetime_columns = [
-        col_name
-        for col_name in df.columns
-        if col_name.startswith('datetime')
-    ]
-    for col_name in datetime_columns:
-        df[col_name] = df[col_name].apply(lambda x: parse_dt(x))
-        df['number_weekday_{}'.format(col_name)] = df[col_name].apply(lambda x: x.weekday())
-        df['number_month_{}'.format(col_name)] = df[col_name].apply(lambda x: x.month)
-        df['number_day_{}'.format(col_name)] = df[col_name].apply(lambda x: x.day)
-        df['number_hour_{}'.format(col_name)] = df[col_name].apply(lambda x: x.hour)
-        df['number_hour_of_week_{}'.format(col_name)] = df[col_name].apply(lambda x: x.hour + x.weekday() * 24)
-        df['number_minute_of_day_{}'.format(col_name)] = df[col_name].apply(lambda x: x.minute + x.hour * 60)
-    return df
+# def transform_datetime_features(df):
+#     datetime_columns = [
+#         col_name
+#         for col_name in df.columns
+#         if col_name.startswith('datetime')
+#     ]
+#     for col_name in datetime_columns:
+#         df[col_name] = df[col_name].apply(lambda x: parse_dt(x))
+#         df['number_weekday_{}'.format(col_name)] = df[col_name].apply(lambda x: x.weekday())
+#         df['number_month_{}'.format(col_name)] = df[col_name].apply(lambda x: x.month)
+#         df['number_day_{}'.format(col_name)] = df[col_name].apply(lambda x: x.day)
+#         df['number_hour_{}'.format(col_name)] = df[col_name].apply(lambda x: x.hour)
+#         df['number_hour_of_week_{}'.format(col_name)] = df[col_name].apply(lambda x: x.hour + x.weekday() * 24)
+#         df['number_minute_of_day_{}'.format(col_name)] = df[col_name].apply(lambda x: x.minute + x.hour * 60)
+#     return df
 
 
 def select_important_dummies(df_x, y, mode, importance=0.05, n_estimators=10):
@@ -142,6 +144,9 @@ def add_polynoms(df, col, degree):
         df[col + '_poly_deg_{}'.format(i)] = df[col] ** i
     return df
 
+<<<<<<< HEAD
+#######################################################################################################################
+=======
 
 def add_log(df, col):
     """make and add logarithm from Series df[col]: log(x)
@@ -307,6 +312,7 @@ def numeric_feature_extraction(df, degree=4, num_mult=True):
 
     return df
 
+>>>>>>> 949080e29dcc3ce0fb9a085be55b957f893c86f3
 # ФУНКЦИИ ДЛЯ РАБОТЫ С ВРЕМЕННЫМИ ДАННЫМИ:
 
 import pandas as pd
@@ -429,3 +435,38 @@ def datefeatures(df, i='index', date=0, time=1, dist=1):
 def make_harmonic_features(value, period):
     value *= 2 * np.pi / period
     return np.cos(value), np.sin(value)
+
+
+def transform_datetime_features(train):
+
+    dfd = train.filter(regex='date*').apply(pd.to_datetime)
+
+    dfd_columns = dfd.columns
+
+    # дополнительно разности дат, если несколько полей с датами
+
+    if dfd.shape[1] > 0:
+
+        for i in range(len(dfd_columns)):
+            for j in dfd_columns[i + 1:]:
+                dfd['diffdate_' + str(i) + '_' + str(j)] = (dfd[dfd_columns[i]] - dfd[j]).dt.seconds // 60 + (
+                            dfd[dfd_columns[i]] - dfd[j]).dt.days * 24 * 60
+
+    # шаблон с индексами исходного
+
+    dfd_feat = pd.DataFrame(index=dfd.index)
+
+    # утилита работает постолбчато
+
+    for feat in dfd_columns:
+        df_temp = (datefeatures(dfd[feat], i=feat, \
+                                date=(dfd[feat].iloc[0].date() == dfd[feat].iloc[-1].date() == pd.to_datetime(
+                                    '00:00:00').date()), \
+                                time=(dfd[feat].iloc[0].time() == dfd[feat].iloc[-1].time() == pd.to_datetime(
+                                    '2000-01-01').time()), \
+                                dist=1))
+        dfd_feat = dfd_feat.join(df_temp, how='outer')
+        df_temp.drop(df_temp.index, inplace=True)
+
+    return dfd_feat
+#######################################################################################################################
