@@ -41,6 +41,7 @@ if __name__ == '__main__':
 
     # dict with data necessary to make predictions
     model_config = {}
+    model_config['constant_columns'] = constant_columns
     model_config['categorical_values'] = {}
     model_config['is_big'] = is_big
 
@@ -61,23 +62,27 @@ if __name__ == '__main__':
         df_X = df_X[new_columns]
 
     else:
+
+        # rename c_, d_, r_
+        df_X = add_prefix_to_colnames(df_X, ONEHOT_MAX_UNIQUE_VALUES)
+        # missing values
+        df_X = replace_na_and_create_na_feature(df_X)
+
+
         # features from datetime
         df_X = transform_datetime_features(df_X)
 
-        # categorical encoding
-        categorical_values = {}
-        for col_name in list(df_X.columns):
-            col_unique_values = df_X[col_name].unique()
-            if 2 < len(col_unique_values) <= ONEHOT_MAX_UNIQUE_VALUES:
-                categorical_values[col_name] = col_unique_values
-                for unique_value in col_unique_values:
-                    df_X['onehot_{}={}'.format(col_name, unique_value)] = (df_X[col_name] == unique_value).astype(int)
-        model_config['categorical_values'] = categorical_values
 
-        # missing values
-        if any(df_X.isnull()):
-            model_config['missing'] = True
-            df_X.fillna(-1, inplace=True)
+
+        # categorical encoding
+        model_config['categorical_to_onehot'], df_X = onehot_encoding_train(df_X, ONEHOT_MAX_UNIQUE_VALUES)
+        model_config['important_dummies'] = select_important_dummies(df_X, y, args.mode, importance=0.05, n_estimators=10)
+
+
+        # real
+
+
+
 
     # use only numeric columns
     used_columns = [
