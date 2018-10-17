@@ -438,11 +438,11 @@ def transform_datetime_features(train):
     # утилита работает постолбчато
 
     for feat in dfd_columns:
-        df_temp = (datefeatures(dfd[feat], i=feat, \
+        df_temp = (datefeatures(dfd[feat], i=feat,
                                 date=(dfd[feat].iloc[0].date() == dfd[feat].iloc[-1].date() == pd.to_datetime(
-                                    '00:00:00').date()), \
+                                    '00:00:00').date()),
                                 time=(dfd[feat].iloc[0].time() == dfd[feat].iloc[-1].time() == pd.to_datetime(
-                                    '2000-01-01').time()), \
+                                    '2000-01-01').time()),
                                 dist=1))
         dfd_feat = dfd_feat.join(df_temp, how='outer')
         df_temp.drop(df_temp.index, inplace=True)
