@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import pickle
 import time
+import numpy as np
 
 from utils import transform_datetime_features
 
@@ -36,7 +37,8 @@ if __name__ == '__main__':
 
     if not model_config['is_big']:
         # features from datetime
-        df = transform_datetime_features(df)
+        df = df.join(transform_datetime_features(df), how='outer')
+
 
         # categorical onehot encoding
         df = onehot_encoding_test(df, model_config['categorical_to_onehot'])
