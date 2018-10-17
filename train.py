@@ -82,7 +82,7 @@ if __name__ == '__main__':
         # transform df with numeric and dummy features by adding new features: x^2...x^k, log(x), 1/x, x1/x2, x1*x2.
         # Hyperparameters. degree: int (max degree of polynoms included)
         # num_mult: True for all multiplications, False for multiplications with dummies only
-        utils.numeric_feature_extraction(df, degree=4, num_mult=True)
+        df_X = utils.numeric_feature_extraction(df, degree=4, num_mult=True)
 
 
 
