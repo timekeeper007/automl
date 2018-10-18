@@ -45,6 +45,18 @@ def select_important_dummies(df_x, y, mode, importance=0.05, n_estimators=10):
     drop_features = list(set(dummies) - set(important_features))
     return important_features, df_x.drop(drop_features, axis=1)
 
+def select_real_features(df_x, y, mode, alpha=0.01):
+    if mode == 'regression':
+        from sklearn.linear_model import Lasso
+        lm = Lasso(alpha=alpha)
+    else:
+        from sklearn.linear_model import LogisticRegression
+        lm = LogisticRegression(C=alpha, penalty='l1')
+    real_cols = [col for col in df_x.columns if col[:2] == 'r_' ]
+    lm.fit(df_x[real_cols], y)
+    important_features = df_x[real_cols].columns[lm.coef_.ravel() > 0].tolist()
+    features_to_drop = list(set(real_cols) - set(important_features))
+    return important_features, df_x.drop(features_to_drop, axis=1)
 
 def onehot_encoding_train(df_x, ONEHOT_MAX_UNIQUE_VALUES):
     categorical_values = {}

@@ -83,7 +83,6 @@ if __name__ == '__main__':
         # selecting dummies using Random Forest
         print("df_X shape before selecting dummies: " + str(df_X.shape))
         model_config['important_dummies'], df_X = utils.select_important_dummies(df_X, df_y, args.mode, importance=0.05, n_estimators=10)
-        print("df_X shape agter selecting dummies: " + str(df_X.columns))
         # real
         # transform df with numeric and dummy features by adding new features: x^2...x^k, log(x), 1/x, x1/x2, x1*x2.
         # Hyperparameters. degree: int (max degree of polynoms included)
@@ -91,7 +90,8 @@ if __name__ == '__main__':
         print("df_X shape before real: " + str(df_X.shape))
         df_X = utils.numeric_feature_extraction(df_X, degree=4, num_mult=True)
 
-
+        print("df_X shape before selecting real: " + str(df_X.shape))
+        model_config['important_real'], df_X = utils.select_real_features(df_X, df_y, args.mode, alpha=1)
 
     # use only numeric columns
     used_columns = [
