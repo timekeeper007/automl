@@ -120,37 +120,43 @@ def replace_na_and_create_na_feature(df_x, na_features=[]):
 ### ---> Utils for working with real features
 
 def num_features_list(df):
-    """list of numeric features according to mask 'r_'
+    """
+    Make list of numeric features according to mask 'r_'.
+    :param df:
+    :return: list
     """
     return [col for col in df if re.match('r_', col)]
 
 
 def dummy_features_list(df):
-    """list of dummy features according to mask 'd_'
+    """
+    Make list of dummy features according to mask 'd_'.
+    :param df:
+    :return: list
     """
     return [col for col in df if re.match('d_', col)]
 
 
 def add_polynoms(df, col, degree):
-    """make and add polynoms from Series df[col] up to some "degree".
-    Inputs:
-     - df: DataFrame,
-     - col: title of the numeric feature (string),
-     - degree: the maximum degree of polynom
-    Output: df with new features
     """
-    # Add polynom feature and name them: 'number_xxx_poly_deg_i'
+    Make and add polynoms from Series df[col] up to some "degree".
+    :param df:
+    :param col: string (title of the numeric feature)
+    :param degree: int (the maximum degree of polynom)
+    :return: df with new features
+    """
+    # Add polynom feature and name them: 'number_xxx_poly_deg_i'.
     for i in range(2, degree + 1):
         df[col + '_poly_deg_{}'.format(i)] = df[col] ** i
     return df
 
 
 def add_log(df, col):
-    """make and add logarithm from Series df[col]: log(x)
-    Inputs:
-     - df: DataFrame,
-     - col: title of the numeric feature (string).
-    Output: df with new features
+    """
+    Make and add logarithm from Series df[col]: log(x).
+    :param df:
+    :param col: string (title of the numeric feature)
+    :return: df with new features
     """
     # Check positivity and lognormality.
     if df[col].min() > 0 and check_norm_shapiro(df[col].apply(lambda x: math.log(x))):
@@ -160,11 +166,11 @@ def add_log(df, col):
 
 
 def add_exp(df, col):
-    """make and add exponent from Series df[col]: exp(x))
-    Inputs:
-     - df: DataFrame,
-     - col: title of the numeric feature (string).
-    Output: df with new features
+    """
+    Make and add exponent from Series df[col]: exp(x).
+    :param df:
+    :param col: string (title of the numeric feature)
+    :return: df with new features
     """
     try:
         # Add logarithm log(1 + ser) feature and name it: 'number_xxx_exp'
@@ -176,11 +182,11 @@ def add_exp(df, col):
 
 
 def add_recip(df, col):
-    """make and add reciprocal from Series df[col]): 1/x
-    Inputs:
-     - df: DataFrame,
-     - col: title of the numeric feature (string).
-    Output: df with new features
+    """
+    Make and add reciprocal from Series df[col]: 1/x.
+    :param df:
+    :param col: string (title of the numeric feature).
+    :return: df with new features.
     """
     # Check positivity of values.
     if df[col].min() > 0:
@@ -190,7 +196,8 @@ def add_recip(df, col):
 
 
 def recip(x):
-    """make reciprocal
+    """
+    Make reciprocal of number.
     """
     try:
         return 1. / x
@@ -199,12 +206,12 @@ def recip(x):
 
 
 def add_fractions(df, num_feats, col):
-    """make and add fractions with all other numeric features.
-    Inputs:
-     - df: DataFrame,
-     - num_feats: list of original numeric features,
-     - col: title of the numeric feature (string).
-    Output: df with new features
+    """
+    Make and add fractions with all other numeric features.
+    :param df:
+    :param num_feats: list of original numeric features.
+    :param col: string (title of the numeric feature).
+    :return: df with new features
     """
     for col2 in df[num_feats].drop(col, axis=1):
         # Check positivity of values.
@@ -215,14 +222,14 @@ def add_fractions(df, num_feats, col):
 
 
 def add_multiplications(df, num_feats, dummy_feats, col, num_mult=True):
-    """make and add multiplicative interactions with all other features.
-    Inputs:
-     - df: DataFrame,
-     - num_feats: list of numeric features,
-     - dummy_feats: list of dummy features,
-     - col: title of the feature (string),
-     - num_mult: True if only dummy interactions, False if both dummy and numeric interactions.
-    Output: df with new features
+    """
+    Make and add multiplicative interactions with all other features.
+    :param df:
+    :param num_feats: list of numeric features.
+    :param dummy_feats: list of dummy features.
+    :param col: string (title of the numeric feature).
+    :param num_mult: True if only dummy interactions, False if both dummy and numeric interactions.
+    :return: df with new features.
     """
     if num_mult == True:
         feats_for_mult = dummy_feats + num_feats
@@ -242,17 +249,14 @@ def check_norm_shapiro(x, alpha=0.05):
     """
     Perform the Shapiro-Wilk test for normality.
     The Shapiro-Wilk test tests the null hypothesis that the data was drawn from a normal distribution.
-    Parameters:
-        x : array_like (Array of sample data).
-        alpha: float (Significance level).
-    Returns:
-        True: if data seems to be drawn from normal dist.
-        False: otherwise.
 
     For reference:
     stats.shapiro(x) returns:
-        W : float (The test statistic).
-        p-value : float (The p-value for the hypothesis test).
+        W : float (the test statistic).
+        p-value : float (the p-value for the hypothesis test).
+    :param x: array_like (array of sample data).
+    :param alpha: alpha: float (significance level).
+    :return: True: if data seems to be drawn from normal dist. False: otherwise.
     """
     # If p-value is less than significance level alpha => reject H0 about normality
     if stats.shapiro(x)[1] < alpha:
@@ -262,13 +266,13 @@ def check_norm_shapiro(x, alpha=0.05):
 
 
 def numeric_feature_extraction(df, degree=4, num_mult=True):
-    """transform df with numeric and dummy features by adding new features:
-    polynoms, logarithm, reciprocal, fractions and multiplicaations.
-    Input:
-        - df
-        - degree: int (max degree of polynoms included)
-        - num_mult: True for all multiplications, False for multiplications with dummies only
-    Output: df with new features
+    """
+    Transform df with numeric and dummy features by adding new features:
+    polynoms, logarithm, reciprocal, fractions and multiplications.
+    :param df:
+    :param degree: int (max degree of polynoms included).
+    :param num_mult: True for all multiplications, False for multiplications with dummies only.
+    :return: df with new features
     """
     # Parse column titles and make lists of numeric and dummy features.
     num_feats = num_features_list(df)
@@ -306,6 +310,9 @@ def numeric_feature_extraction(df, degree=4, num_mult=True):
         # num_mult = True for all multiplications
         # num_mult = False for multiplications with dummies only
         add_multiplications(df, num_feats, dummy_feats, col, num_mult)
+
+    # # Add new features to model_config.
+    # extra_numeric_features = list(set(df.columns) - set(all_feats))
 
     return df
 

@@ -44,6 +44,7 @@ if __name__ == '__main__':
         df = utils.onehot_encoding_test(df, model_config['categorical_to_onehot'])
 
         # real number feature extraction
+        df = utils.numeric_feature_extraction(df, degree=4, num_mult=True)
 
 
     # filter columns
