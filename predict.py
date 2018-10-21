@@ -24,6 +24,7 @@ if __name__ == '__main__':
     with open(model_config_filename, 'rb') as fin:
         model_config = pickle.load(fin)
 
+    ONEHOT_MAX_UNIQUE_VALUES = model_config['ONEHOT_MAX_UNIQUE_VALUES']
     # read dataset
     df = pd.read_csv(args.test_csv)
     print('Dataset read, shape {}'.format(df.shape))
@@ -31,9 +32,9 @@ if __name__ == '__main__':
     # drop train constant values
     df.drop(model_config['constant_columns'], axis=1, inplace=True)
     # rename c_, d_, r_
-    df_X = utils.add_prefix_to_colnames(df_X, ONEHOT_MAX_UNIQUE_VALUES)
+    df = utils.add_prefix_to_colnames(df, ONEHOT_MAX_UNIQUE_VALUES)
     # missing values
-    df_X = utils.replace_na_and_create_na_feature(df_X)
+    _, df = utils.replace_na_and_create_na_feature(df, model_config['na_features'])
 
     if not model_config['is_big']:
         # features from datetime
@@ -44,12 +45,6 @@ if __name__ == '__main__':
 
         # real number feature extraction
 
-
-    # missing values
-    # if model_config['missing']:
-    #     df.fillna(-1, inplace=True)
-    # elif any(df.isnull()):
-    #     df.fillna(value=df.mean(axis=0), inplace=True)
 
     # filter columns
     used_columns = model_config['used_columns']

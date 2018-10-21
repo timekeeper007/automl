@@ -12,7 +12,7 @@ import utils
 
 # use this to stop the algorithm before time limit exceeds
 TIME_LIMIT = int(os.environ.get('TIME_LIMIT', 5*60))
-ONEHOT_MAX_UNIQUE_VALUES = 20
+ONEHOT_MAX_UNIQUE_VALUES = 31
 BIG_DATASET_SIZE = 500 * 1024 * 1024
 
 if __name__ == '__main__':
@@ -44,6 +44,7 @@ if __name__ == '__main__':
     model_config['constant_columns'] = constant_columns
     model_config['categorical_values'] = {}
     model_config['is_big'] = is_big
+    model_config['ONEHOT_MAX_UNIQUE_VALUES'] = ONEHOT_MAX_UNIQUE_VALUES
 
     if is_big:
         # missing values
@@ -68,12 +69,11 @@ if __name__ == '__main__':
         df_X = utils.add_prefix_to_colnames(df_X, ONEHOT_MAX_UNIQUE_VALUES)
         # missing values
         print("df_X shape before na replacement: " + str(df_X.shape))
-        df_X = utils.replace_na_and_create_na_feature(df_X)
+        model_config['na_features'], df_X = utils.replace_na_and_create_na_feature(df_X)
 
         # features from datetime
         print("df_X shape before adding datetime features: " + str(df_X.shape))
         df_X = utils.transform_datetime_features(df_X)
-
 
 
         # categorical encoding

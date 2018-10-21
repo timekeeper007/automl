@@ -92,12 +92,17 @@ def add_prefix_to_colnames(df_x, ONEHOT_MAX_UNIQUE_VALUES=6):
     return df_x
 
 
-def replace_na_and_create_na_feature(df_x):
+def replace_na_and_create_na_feature(df_x, na_features=[]):
     import numpy as np
     # create colname_NA dummi column
-    for col in df_x.columns:
-        if df_x[col].isna().any():
-            df_x[col + '_NA'] = (df_x[col].isna()).astype(int)
+    if na_features:
+        for col in na_features:
+            df_X['d_'+col+'_NA'] = (df_x[col].isna()).astype(int)
+    else:
+        for col in df_x.columns:
+            if df_x[col].isna().any():
+                na_features.append(col)
+                df_x['d_'+col + '_NA'] = (df_x[col].isna()).astype(int)
 
     # replace NA with mean or mode
     from scipy.stats import mode
@@ -109,7 +114,7 @@ def replace_na_and_create_na_feature(df_x):
         if col[:2] == 'd_':
             df_x[col].fillna(0, inplace=True)
 
-    return df_x
+    return na_features, df_x
 
 
 ### ---> Utils for working with real features
